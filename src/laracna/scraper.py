@@ -69,14 +69,15 @@ class Scraper(object):
 
             if delay is None:
                 delay = self.min_delay
-            time.sleep(delay / 1000.0)
+            delay /= 1000.0
+            time.sleep(delay)
 
             cache_item = self.cache.get(url)
             if cache_item is None:
                 try:
                     response = session.get(url)
                     self.cache.put(url, response.status_code, response.content)
-                except Exception:
+                except Exception as e:
                     self.cache.put(url, 500, "")
 
                 cache_item = self.cache.get(url)
@@ -105,6 +106,7 @@ class Scraper(object):
                 "body": results,
             }
             self.outgoing_queue.send(out_item)
+            print(out_item)
 
 
 

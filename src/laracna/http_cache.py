@@ -46,6 +46,6 @@ class HttpCache(object):
         filename = os.path.join(self.basedir, self.sanitize_url(url))
         try:
             with open(filename, "w") as f:
-                f.write("\n".join([str(code), body]))
+                f.write("\n".join([str(code), body.decode("utf-8")]))
         except Exception:
-            pass
+            raise
