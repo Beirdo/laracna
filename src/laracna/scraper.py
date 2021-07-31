@@ -1,9 +1,7 @@
-import json
 import logging
 import pickle
 import random
 import time
-from http.cookiejar import CookieJar
 from multiprocessing import Queue
 from threading import Thread
 
@@ -15,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class Scraper(object):
-    def __init__(self, min_delay=None, max_delay=None, callbacks=None, user_agent=None):
+    def __init__(self, min_delay=None, max_delay=None, callbacks=None, user_agent=None, basedir=None, expiry=None):
         if min_delay is None:
             min_delay = 1.0
         if max_delay is None:
@@ -43,7 +41,7 @@ class Scraper(object):
 
         self.incoming_queue = Queue()
         self.outgoing_queue = Queue()
-        self.cache = HttpCache()
+        self.cache = HttpCache(basedir=basedir, expiry=expiry)
         self.scrape_thread = None
         self.abort = False
 
@@ -215,4 +213,3 @@ class Scraper(object):
                 results.append(item.get("results", None))
 
         return results
-
