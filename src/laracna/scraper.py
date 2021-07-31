@@ -44,6 +44,7 @@ class Scraper(object):
         self.cache = HttpCache(basedir=basedir, expiry=expiry)
         self.scrape_thread = None
         self.abort = False
+        self.visited = set()
 
     def load_cookies(self, cookiefile):
         if not cookiefile:
@@ -143,6 +144,9 @@ class Scraper(object):
                 type_ = item.get("type", None)
                 headers = item.get("headers", None)
 
+                if url in self.visited:
+                    continue
+
                 if delay is None:
                     delay = self.min_delay
                 delay /= 1000.0
@@ -170,6 +174,8 @@ class Scraper(object):
                         body = response.content.decode("utf-8")
                 except Exception:
                     continue
+
+                self.visited.add(url)
 
                 callback = self.callbacks.get(type_, None)
                 if callback is None:
