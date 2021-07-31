@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 import time
+from hashlib import md5
 
 logger = logging.getLogger(__name__)
 
@@ -18,8 +19,9 @@ class HttpCache(object):
         self.expiry = expiry
 
     @staticmethod
-    def sanitize_url(url):
-        return "buh"
+    def sanitize_url(url: str):
+        d = md5(url.encode("utf-8"))
+        return d.hexdigest()
 
     def get(self, url):
         filename = os.path.join(self.basedir, self.sanitize_url(url))
