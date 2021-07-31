@@ -2,6 +2,7 @@ import json
 import logging
 import random
 import time
+from http.cookiejar import CookieJar
 from multiprocessing import Queue
 from threading import Thread
 
@@ -43,6 +44,7 @@ class Scraper(object):
             "User-Agent": self.user_agent,
         })
         self.session.auth = self.auth
+        self.session.cookies = CookieJar()
 
         self.incoming_queue = Queue()
         self.outgoing_queue = Queue()
