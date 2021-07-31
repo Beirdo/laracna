@@ -37,23 +37,46 @@ class Scraper(object):
             auth = None
         self.auth = auth
 
+        self.session = requests.Session()
+        self.session.headers.update({
+            "User-Agent": self.user_agent,
+        })
+        self.session.auth = self.auth
+
         self.incoming_queue = Queue()
         self.outgoing_queue = Queue()
         self.cache = HttpCache()
         self.scrape_thread = None
         self.abort = False
 
-    def grab(self, url, type_):
-        message = {
-            "type": type_,
-            "url": url,
-            "delay": random.randint(self.min_delay, self.max_delay),
-        }
-        self.incoming_queue.put(message)
+    def queue(self, url=None, type_=None, method=None, body=None, item=None):
+        if not item:
+            if not url:
+                item = {}
 
-    def scrape(self, start_url):
-        # Prime the pump
-        self.grab(start_url, "initial")
+            if not method:
+                method = "GET"
+            method = method.upper()
+
+            if not type_:
+                type_ = "initial"
+
+            item = {
+                "type": type_,
+                "url": url,
+                "method": method,
+                "body": body,
+            }
+
+        if item:
+            item["delay"] = random.randint(self.min_delay, self.max_delay)
+
+        self.incoming_queue.put(item)
+
+    def scrape(self, start_url=None, type_=None, method=None, body=None):
+        if start_url:
+            # Prime the pump
+            self.queue(start_url, type_, method, body)
 
         if not self.scrape_thread:
             self.abort = False
@@ -67,12 +90,6 @@ class Scraper(object):
         self.scrape_thread = None
 
     def scrape_thread_loop(self):
-        session = requests.Session()
-        session.headers.update({
-            "User-Agent": self.user_agent,
-        })
-        session.auth = self.auth
-
         while not self.abort:
             try:
                 item = self.incoming_queue.get()
@@ -81,11 +98,14 @@ class Scraper(object):
 
             if not item or self.abort:
                 self.abort = True
+                self.queue(item=None)
                 self.outgoing_queue.put({})
                 return
 
             delay = item.get("delay", None)
             url = item.get("url", None)
+            method = item.get("method", "GET")
+            body = item.get("body", None)
             type_ = item.get("type", None)
 
             if delay is None:
@@ -96,7 +116,7 @@ class Scraper(object):
             cache_item = self.cache.get(url)
             if cache_item is None:
                 try:
-                    response = session.get(url)
+                    response = self.session.request(method, url, data=body)
                     self.cache.put(url, response.status_code, response.content)
                 except Exception as e:
                     self.cache.put(url, 500, "")
@@ -118,7 +138,7 @@ class Scraper(object):
                 raise NotImplementedError("No runnable callback for type %s" % type)
 
             for chain_item in chain_items:
-                self.incoming_queue.put(chain_item)
+                self.queue(item=chain_item)
 
             out_item = {
                 "url": url,
@@ -127,7 +147,6 @@ class Scraper(object):
                 "body": results,
             }
             self.outgoing_queue.put(out_item)
-            print(out_item)
 
     def get_results(self):
         results = []
@@ -135,7 +154,9 @@ class Scraper(object):
             item = self.outgoing_queue.get()
             if not item:
                 break
-            results.append(item)
+
+            if item.get("code", 500) // 100 == 2:
+                results.append(item.get("results", None))
 
         return results
 
