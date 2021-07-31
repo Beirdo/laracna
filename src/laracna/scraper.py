@@ -181,17 +181,19 @@ class Scraper(object):
 
                 callback = self.callbacks.get(type_, None)
                 if callback is None:
-                    results = cache_item
-                    chain_items = []
+                    callback_response = {
+                        "results": cache_item,
+                    }
                 elif hasattr(callback, "__call__"):
                     logger.info("Using callback for type: %s" % type_)
-                    (results, chain_items) = callback(cache_item)
+                    callback_response = callback(cache_item)
                 else:
                     raise NotImplementedError("No runnable callback for type %s" % type)
 
-                for chain_item in chain_items:
+                for chain_item in callback_response.get("chain", []):
                     self.queue(item=chain_item)
 
+                results = callback_response.get("results", None)
                 if results:
                     out_item = {
                         "url": url,
