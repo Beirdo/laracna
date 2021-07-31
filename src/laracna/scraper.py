@@ -190,6 +190,9 @@ class Scraper(object):
                 else:
                     raise NotImplementedError("No runnable callback for type %s" % type)
 
+                if not callback_response:
+                    callback_response = {}
+
                 for chain_item in callback_response.get("chain", []):
                     self.queue(item=chain_item)
 
