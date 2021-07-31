@@ -146,8 +146,6 @@ class Scraper(object):
                 if delay is None:
                     delay = self.min_delay
                 delay /= 1000.0
-                logger.info("Sleeping %.3fs" % delay)
-                time.sleep(delay)
 
                 logger.info("%s/%s" % (method, url))
                 try:
@@ -155,6 +153,7 @@ class Scraper(object):
                         cache_item = self.cache.get(url)
                         if cache_item is None:
                             logger.info("Item not cached, requesting")
+                            self.delay(delay)
                             try:
                                 response = self.session.request(method, url, headers=headers)
                                 self.cache.put(url, response.status_code, response.content)
@@ -165,6 +164,7 @@ class Scraper(object):
 
                         (code, body) = cache_item
                     else:
+                        self.delay(delay)
                         response = self.session.request(method, url, data=data, json=json_data, headers=headers)
                         code = response.status_code
                         body = response.content.decode("utf-8")
@@ -195,6 +195,10 @@ class Scraper(object):
         finally:
             self.abort = True
             self.outgoing_queue.put({})
+
+    def delay(self, delay_time):
+        logger.info("Sleeping %.3fs" % delay_time)
+        time.sleep(delay_time)
 
     def get_results(self):
         results = []
