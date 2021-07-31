@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class Scraper(object):
-    def __init__(self, min_delay=None, max_delay=None, callbacks=None, user_agent=None, auth=None):
+    def __init__(self, min_delay=None, max_delay=None, callbacks=None, user_agent=None):
         if min_delay is None:
             min_delay = 1.0
         if max_delay is None:
@@ -35,15 +35,10 @@ class Scraper(object):
             user_agent = "Laracna/1.0 (gjhurlbu@gmail.com)"
         self.user_agent = user_agent
 
-        if not auth:
-            auth = None
-        self.auth = auth
-
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": self.user_agent,
         })
-        self.session.auth = self.auth
         self.session.cookies = CookieJar()
 
         self.incoming_queue = Queue()
@@ -52,15 +47,19 @@ class Scraper(object):
         self.scrape_thread = None
         self.abort = False
 
-    def queue(self, url=None, type_=None, method=None, body=None, content_type=None, item=None):
+    def queue(self, **kwargs):
+        item = kwargs.get("item", None)
         if not item:
+            url = kwargs.get("url", None)
             if not url:
                 item = {}
 
+            method = kwargs.get("method", None)
             if not method:
                 method = "GET"
             method = method.upper()
 
+            type_ = kwargs.get("type_", None)
             if not type_:
                 type_ = "initial"
 
@@ -68,8 +67,9 @@ class Scraper(object):
                 "type": type_,
                 "url": url,
                 "method": method,
-                "body": body,
-                "content-type": content_type,
+                "data": kwargs.get("data", None),
+                "json_data": kwargs.get("json_data", None),
+                "headers": kwargs.get("headers", None),
             }
 
         if item:
@@ -78,10 +78,11 @@ class Scraper(object):
         logger.info("Queuing item: %s" % item.get("url", None))
         self.incoming_queue.put(item)
 
-    def scrape(self, start_url=None, type_=None, method=None, body=None, content_type=None):
+    def scrape(self, **kwargs):
+        start_url = kwargs.get("start_url", None)
         if start_url:
             # Prime the pump
-            self.queue(url=start_url, type_=type_, method=method, body=body, content_type=content_type)
+            self.queue(**kwargs)
 
         if not self.scrape_thread:
             self.abort = False
@@ -123,13 +124,10 @@ class Scraper(object):
                 delay = item.get("delay", None)
                 url = item.get("url", None)
                 method = item.get("method", "GET")
-                body = item.get("body", None)
+                data = item.get("data", None)
+                json_data = item.get("json_data", None)
                 type_ = item.get("type", None)
-                content_type = item.get("content=type", None)
-
-                if isinstance(body, (list, dict)):
-                    body = json.dumps(body)
-                    content_type = "application/json"
+                headers = item.get("headers", None)
 
                 if delay is None:
                     delay = self.min_delay
@@ -144,7 +142,7 @@ class Scraper(object):
                         if cache_item is None:
                             logger.info("Item not cached, requesting")
                             try:
-                                response = self.session.request(method, url)
+                                response = self.session.request(method, url, headers=headers)
                                 self.cache.put(url, response.status_code, response.content)
                             except Exception as e:
                                 self.cache.put(url, 500, "")
@@ -153,14 +151,7 @@ class Scraper(object):
 
                         (code, body) = cache_item
                     else:
-                        if content_type:
-                            headers = {
-                                "Content-Type": content_type,
-                            }
-                        else:
-                            headers = None
-
-                        response = self.session.request(method, url, data=body, headers=headers)
+                        response = self.session.request(method, url, data=data, json=json_data, headers=headers)
                         code = response.status_code
                         body = response.content.decode("utf-8")
                 except Exception:
