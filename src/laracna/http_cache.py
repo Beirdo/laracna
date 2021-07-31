@@ -38,7 +38,11 @@ class HttpCache(object):
             with open(filename, "r") as f:
                 code = int(f.readline().strip())
                 body = f.read()
-                return (code, body)
+                return {
+                    "code": code,
+                    "body": body,
+                    "ctime": ctime,
+                }
         except Exception:
             return None
 

@@ -145,6 +145,7 @@ class Scraper(object):
                 headers = item.get("headers", None)
 
                 if url in self.visited:
+                    logger.info("URL already visited: %s" % url)
                     continue
 
                 if delay is None:
@@ -165,13 +166,14 @@ class Scraper(object):
                                 self.cache.put(url, 500, "")
 
                             cache_item = self.cache.get(url)
-
-                        (code, body) = cache_item
                     else:
                         self.delay(delay)
                         response = self.session.request(method, url, data=data, json=json_data, headers=headers)
-                        code = response.status_code
-                        body = response.content.decode("utf-8")
+                        cache_item = {
+                            "code": response.status_code,
+                            "body": response.content.decode("utf-8"),
+                            "ctime": time.time(),
+                        }
                 except Exception:
                     continue
 
@@ -179,11 +181,11 @@ class Scraper(object):
 
                 callback = self.callbacks.get(type_, None)
                 if callback is None:
-                    results = body
+                    results = cache_item
                     chain_items = []
                 elif hasattr(callback, "__call__"):
                     logger.info("Using callback for type: %s" % type_)
-                    (results, chain_items) = callback(code, body)
+                    (results, chain_items) = callback(cache_item)
                 else:
                     raise NotImplementedError("No runnable callback for type %s" % type)
 
@@ -194,7 +196,7 @@ class Scraper(object):
                     out_item = {
                         "url": url,
                         "type": type_,
-                        "code": code,
+                        "code": cache_item.get("code", None),
                         "results": results,
                     }
                     self.outgoing_queue.put(out_item)
