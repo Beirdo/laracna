@@ -71,15 +71,20 @@ class Scraper(object):
                 delay = self.min_delay
             time.sleep(delay / 1000.0)
 
-            (code, body) = self.cache.get(url)
-            if body is None:
+            cache_item = self.cache.get(url)
+            if cache_item is None:
                 try:
                     response = session.get(url)
                     self.cache.put(url, response.status_code, response.content)
                 except Exception:
                     self.cache.put(url, 500, "")
 
-                (code, body) = self.cache.get(url)
+                cache_item = self.cache.get(url)
+
+            try:
+                (code, body) = cache_item
+            except Exception:
+                continue
 
             callback = self.callbacks.get(type_, None)
             if callback is None:
