@@ -73,26 +73,31 @@ class Scraper(object):
         if item:
             item["delay"] = random.randint(self.min_delay, self.max_delay)
 
+        logger.info("Queuing item: %s" % item.get("url", None))
         self.incoming_queue.put(item)
 
-    def scrape(self, start_url=None, type_=None, method=None, body=None):
+    def scrape(self, start_url=None, type_=None, method=None, body=None, content_type=None):
         if start_url:
             # Prime the pump
-            self.queue(start_url, type_, method, body)
+            self.queue(url=start_url, type_=type_, method=method, body=body, content_type=content_type)
 
         if not self.scrape_thread:
             self.abort = False
+            logger.info("Launching scraper thread")
             self.scrape_thread = Thread(target=self.scrape_thread_loop, daemon=True)
             self.scrape_thread.start()
 
     def stop_scraping(self):
+        logger.info("Aborting scraper thread")
         self.abort = True
         self.incoming_queue.put({})
         self.wait()
 
     def wait(self):
+        logger.info("Waiting for scraper thread")
         self.scrape_thread.join()
         self.scrape_thread = None
+        logger.info("Scraper thread shut down")
 
     def scrape_thread_loop(self):
         try:
@@ -104,6 +109,7 @@ class Scraper(object):
                 except Exception:
                     if done >= 10:
                         self.abort = True
+                        logger.info("No items for 10s, shutting down")
                     else:
                         done += 1
                         time.sleep(1.0)
@@ -126,12 +132,15 @@ class Scraper(object):
                 if delay is None:
                     delay = self.min_delay
                 delay /= 1000.0
+                logger.info("Sleeping %.3fs" % delay)
                 time.sleep(delay)
 
+                logger.info("%s/%s" % (method, url))
                 try:
                     if method == "GET":
                         cache_item = self.cache.get(url)
                         if cache_item is None:
+                            logger.info("Item not cached, requesting")
                             try:
                                 response = self.session.request(method, url)
                                 self.cache.put(url, response.status_code, response.content)
@@ -160,6 +169,7 @@ class Scraper(object):
                     results = body
                     chain_items = []
                 elif hasattr(callback, "__call__"):
+                    logger.info("Using callback for type: %s" % type_)
                     (results, chain_items) = callback(code, body)
                 else:
                     raise NotImplementedError("No runnable callback for type %s" % type)
