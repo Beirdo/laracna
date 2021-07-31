@@ -113,18 +113,23 @@ class Scraper(object):
             delay /= 1000.0
             time.sleep(delay)
 
-            cache_item = self.cache.get(url)
-            if cache_item is None:
-                try:
-                    response = self.session.request(method, url, data=body)
-                    self.cache.put(url, response.status_code, response.content)
-                except Exception as e:
-                    self.cache.put(url, 500, "")
-
-                cache_item = self.cache.get(url)
-
             try:
-                (code, body) = cache_item
+                if method == "GET":
+                    cache_item = self.cache.get(url)
+                    if cache_item is None:
+                        try:
+                            response = self.session.request(method, url)
+                            self.cache.put(url, response.status_code, response.content)
+                        except Exception as e:
+                            self.cache.put(url, 500, "")
+
+                        cache_item = self.cache.get(url)
+
+                    (code, body) = cache_item
+                else:
+                    response = self.session.request(method, url, data=body)
+                    code = response.status_code
+                    body = response.content.decode("utf-8")
             except Exception:
                 continue
 
