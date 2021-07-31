@@ -1,5 +1,6 @@
 import json
 import logging
+import pickle
 import random
 import time
 from http.cookiejar import CookieJar
@@ -39,13 +40,26 @@ class Scraper(object):
         self.session.headers.update({
             "User-Agent": self.user_agent,
         })
-        self.session.cookies = CookieJar()
 
         self.incoming_queue = Queue()
         self.outgoing_queue = Queue()
         self.cache = HttpCache()
         self.scrape_thread = None
         self.abort = False
+
+    def load_cookies(self, cookiefile):
+        if not cookiefile:
+            return
+
+        with open(cookiefile, "rb") as f:
+            self.session.cookies.update(pickle.load(f))
+
+    def save_cookies(self, cookiefile):
+        if not cookiefile:
+            return
+
+        with open(cookiefile, "wb") as f:
+            pickle.dump(self.session.cookies, f)
 
     def queue(self, **kwargs):
         item = kwargs.get("item", None)
