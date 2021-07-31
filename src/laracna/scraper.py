@@ -51,6 +51,7 @@ class Scraper(object):
         if not cookiefile:
             return
 
+        logger.info("Loading cookies from %s" % cookiefile)
         with open(cookiefile, "rb") as f:
             self.session.cookies.update(pickle.load(f))
 
@@ -58,6 +59,7 @@ class Scraper(object):
         if not cookiefile:
             return
 
+        logger.info("Saving cookies to %s" % cookiefile)
         with open(cookiefile, "wb") as f:
             pickle.dump(self.session.cookies, f)
 
@@ -196,7 +198,8 @@ class Scraper(object):
             self.abort = True
             self.outgoing_queue.put({})
 
-    def delay(self, delay_time):
+    @staticmethod
+    def delay(delay_time):
         logger.info("Sleeping %.3fs" % delay_time)
         time.sleep(delay_time)
 
