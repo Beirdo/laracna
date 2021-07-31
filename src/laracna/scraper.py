@@ -144,12 +144,13 @@ class Scraper(object):
                 "url": url,
                 "type": type_,
                 "code": code,
-                "body": results,
+                "results": results,
             }
             self.outgoing_queue.put(out_item)
 
     def get_results(self):
         results = []
+        self.outgoing_queue.put({})
         while True:
             item = self.outgoing_queue.get()
             if not item:
