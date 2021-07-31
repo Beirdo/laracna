@@ -1,3 +1,4 @@
+import json
 import logging
 import random
 import time
@@ -49,7 +50,7 @@ class Scraper(object):
         self.scrape_thread = None
         self.abort = False
 
-    def queue(self, url=None, type_=None, method=None, body=None, item=None):
+    def queue(self, url=None, type_=None, method=None, body=None, content_type=None, item=None):
         if not item:
             if not url:
                 item = {}
@@ -66,6 +67,7 @@ class Scraper(object):
                 "url": url,
                 "method": method,
                 "body": body,
+                "content-type": content_type,
             }
 
         if item:
@@ -107,6 +109,11 @@ class Scraper(object):
             method = item.get("method", "GET")
             body = item.get("body", None)
             type_ = item.get("type", None)
+            content_type = item.get("content=type", None)
+
+            if isinstance(body, (list, dict)):
+                body = json.dumps(body)
+                content_type = "application/json"
 
             if delay is None:
                 delay = self.min_delay
@@ -127,7 +134,14 @@ class Scraper(object):
 
                     (code, body) = cache_item
                 else:
-                    response = self.session.request(method, url, data=body)
+                    if content_type:
+                        headers = {
+                            "Content-Type": content_type,
+                        }
+                    else:
+                        headers = None
+
+                    response = self.session.request(method, url, data=body, headers=headers)
                     code = response.status_code
                     body = response.content.decode("utf-8")
             except Exception:
