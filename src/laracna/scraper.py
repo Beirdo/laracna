@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class Scraper(object):
-    def __init__(self, min_delay=None, max_delay=None, callbacks=None, user_agent=None):
+    def __init__(self, min_delay=None, max_delay=None, callbacks=None, user_agent=None, auth=None):
         if min_delay is None:
             min_delay = 1.0
         if max_delay is None:
@@ -31,6 +31,10 @@ class Scraper(object):
         if not user_agent:
             user_agent = "Laracna/1.0 (gjhurlbu@gmail.com)"
         self.user_agent = user_agent
+
+        if not auth:
+            auth = None
+        self.auth = auth
 
         self.incoming_queue = RabbitQueue("requests")
         self.outgoing_queue = RabbitQueue("results")
@@ -52,6 +56,7 @@ class Scraper(object):
         session.headers.update({
             "User-Agent": self.user_agent,
         })
+        session.auth = self.auth
 
         for item in self.incoming_queue.poll():
             if not item:
