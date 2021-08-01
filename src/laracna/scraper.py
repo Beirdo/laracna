@@ -171,6 +171,7 @@ class Scraper(object):
                         response = self.session.request(method, url, data=data, json=json_data, headers=headers)
                         cache_item = {
                             "code": response.status_code,
+                            "url": url,
                             "body": response.content.decode("utf-8"),
                             "ctime": time.time(),
                         }
