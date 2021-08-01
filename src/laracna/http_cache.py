@@ -40,6 +40,7 @@ class HttpCache(object):
                 body = f.read()
                 return {
                     "code": code,
+                    "url": url,
                     "body": body,
                     "ctime": ctime,
                 }
