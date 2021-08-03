@@ -7,6 +7,7 @@ from threading import Thread
 
 import requests
 
+from laracna import LARACNA_VERSION
 from laracna.http_cache import HttpCache
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,7 @@ class Scraper(object):
         self.callbacks = callbacks
 
         if not user_agent:
-            user_agent = "Laracna/1.0 (gjhurlbu@gmail.com)"
+            user_agent = "Laracna/%s (gjhurlbu@gmail.com)" % LARACNA_VERSION
         self.user_agent = user_agent
 
         self.session = requests.Session()
